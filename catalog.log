@@ -1,0 +1,10 @@
+ok   whisper-base-q8: 5359861c 81768585 bytes
+ok   whisper-small-q5: 5359861c 190085487 bytes
+ok   whisper-small-q8: 5359861c 264464607 bytes
+ok   whisper-turbo-q5: 5359861c 574041195 bytes
+ok   gemma3-1b: f0b45be0 806058272 bytes
+ok   qwen3-1.7b: d7f544ee 1107409472 bytes
+ok   qwen3-4b-2507: a06e946b 2497281120 bytes
+ok   gemma3-4b: 5a3566e7 2489894016 bytes
+ok   speaker-resnet34: 26530550 bytes (direct)
+ok   VAD 885098 bytes
