@@ -36,6 +36,7 @@ if (ANDROID)
     target_link_options(llama_jni PRIVATE
         -Wl,--exclude-libs,ALL
         -Wl,-z,max-page-size=16384
-        -Wl,--gc-sections)
+        -Wl,--gc-sections
+        -Wl,--strip-all)
 endif()
 target_compile_options(llama_jni PRIVATE -O3 -fvisibility=hidden -ffunction-sections -fdata-sections)
