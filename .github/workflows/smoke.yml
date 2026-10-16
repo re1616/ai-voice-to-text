@@ -59,3 +59,44 @@ jobs:
           git -c user.name=ci -c user.email=ci@localhost add -A
           git -c user.name=ci -c user.email=ci@localhost commit -q --allow-empty -m "smoke ${GITHUB_SHA::7}"
           git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" ci-smoke:ci-smoke
+
+  native:
+    # Exercises the JNI bridges on the x86_64 runner with real models and a sample recording.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Build host JNI libraries and run
+        shell: bash
+        run: |
+          mkdir -p native-out
+          set -o pipefail
+          {
+            ./scripts/fetch-deps.sh
+            J=$JAVA_HOME/include
+            for m in whisper llama; do
+              cmake -S $m/src/main/cpp -B /tmp/b-$m -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-I$J -I$J/linux" -DCMAKE_C_FLAGS="-I$J -I$J/linux" > /dev/null
+              cmake --build /tmp/b-$m --target ${m}_jni -j 4 > /dev/null
+            done
+            HF=https://huggingface.co
+            curl -sL -o /tmp/base.bin $HF/ggerganov/whisper.cpp/resolve/main/ggml-base-q8_0.bin
+            curl -sL -o /tmp/vad.bin $HF/ggml-org/whisper-vad/resolve/main/ggml-silero-v5.1.2.bin
+            curl -sL -o /tmp/llm.gguf $HF/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf
+            ls -la /tmp/*.bin /tmp/*.gguf
+            mkdir -p /tmp/nt
+            javac -d /tmp/nt $(find scripts/native-test -name "*.java")
+            java -cp /tmp/nt NativeTest /tmp/b-whisper/libwhisper_jni.so /tmp/b-llama/libllama_jni.so /tmp/base.bin /tmp/vad.bin third_party/whisper.cpp/samples/jfk.wav /tmp/llm.gguf
+          } 2>&1 | tee native-out/native.txt
+      - name: Publish results
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p native-out && cd native-out
+          git init -q -b ci-native
+          git -c user.name=ci -c user.email=ci@localhost add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -q --allow-empty -m "native ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" ci-native:ci-native

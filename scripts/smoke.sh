@@ -8,26 +8,34 @@ adb logcat -c
 
 shot() { adb exec-out screencap -p > "$OUT/$1.png"; adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml "$OUT/$1.xml" >/dev/null 2>&1; }
 
-# tap the centre of the first node whose text or content-desc contains $1
+# tap the centre of a node whose text/content-desc equals $1 (else contains $1); scrolls down if needed
 tap() {
-  adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
-  adb pull /sdcard/ui.xml /tmp/ui.xml >/dev/null 2>&1
-  python3 - "$1" <<'EOF' > /tmp/xy
+  for attempt in 1 2 3 4; do
+    adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
+    adb pull /sdcard/ui.xml /tmp/ui.xml >/dev/null 2>&1
+    python3 - "$1" <<'EOF2' > /tmp/xy
 import re, sys
 want = sys.argv[1]
 xml = open('/tmp/ui.xml', encoding='utf-8').read()
+nodes = []
 for m in re.finditer(r'<node [^>]*>', xml):
     n = m.group(0)
     t = re.search(r' text="([^"]*)"', n).group(1)
     d = re.search(r'content-desc="([^"]*)"', n).group(1)
-    if want in t or want in d:
-        b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', n)
-        x1, y1, x2, y2 = map(int, b.groups())
-        print((x1 + x2) // 2, (y1 + y2) // 2)
-        break
-EOF
-  if [ -s /tmp/xy ]; then adb shell input tap $(cat /tmp/xy); echo "tapped '$1'"; else echo "NOT FOUND: '$1'" | tee -a $OUT/missing.txt; fi
-  sleep 2
+    b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', n)
+    nodes.append((t, d, tuple(map(int, b.groups()))))
+hit = [x for x in nodes if x[0] == want or x[1] == want] or [x for x in nodes if want in x[0] or want in x[1]]
+if hit:
+    x1, y1, x2, y2 = hit[0][2]
+    print((x1 + x2) // 2, (y1 + y2) // 2)
+EOF2
+    if [ -s /tmp/xy ]; then adb shell input tap $(cat /tmp/xy); echo "tapped '$1'"; sleep 2; return 0; fi
+    read W H < <(adb shell wm size | tail -1 | sed 's/.*: //; s/x/ /')
+    adb shell input swipe $((W/2)) $((H*3/4)) $((W/2)) $((H/4)) 300
+    sleep 1
+  done
+  echo "NOT FOUND: '$1'" | tee -a $OUT/missing.txt
+  return 1
 }
 
 adb install -r app.apk 2>&1 | tee $OUT/install.txt
