@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import app.aivoicetotext.App
+import app.aivoicetotext.data.AiResult
 import app.aivoicetotext.data.AiStatus
 import app.aivoicetotext.data.DbHelper
 import app.aivoicetotext.data.Note
@@ -42,7 +43,7 @@ object Exporter {
             }
         }
         val ai = app.repo.aiResults(noteId).filter { it.status == AiStatus.DONE }.let { list ->
-            note.summary?.let { listOf(app.aivoicetotext.data.AiResult(0, noteId, 0, "Главное", "text", it, null, AiStatus.DONE, 0, 0, null, 0)) + list } ?: list
+            note.summary?.let { listOf(AiResult(0, noteId, 0, "Главное", "text", it, null, AiStatus.DONE, 0, 0, null, 0)) + list } ?: list
         }
         return when (format) {
             ExportFormat.MD -> markdown(note, segs, ai.map { it.title to it.content }, timestamps)

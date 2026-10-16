@@ -15,6 +15,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import app.aivoicetotext.App
 import app.aivoicetotext.R
 import app.aivoicetotext.ui.MainActivity
 
@@ -71,7 +72,7 @@ object Jobs {
     }
 
     /** Chains speaker detection and the automatic summary after a finished transcription. */
-    fun afterTranscription(app: app.aivoicetotext.App, noteId: Long) {
+    fun afterTranscription(app: App, noteId: Long) {
         val s = app.prefs.value
         when {
             s.autoSpeakers && app.models.speakerModel() != null -> diarize(app, noteId, 0, thenSummary = true)
