@@ -96,10 +96,46 @@ class DbHelper(context: Context) : SQLiteOpenHelper(context, NAME, null, VERSION
         // Full-text index; docid = note id. Text is pre-normalised (lower case, ё -> е).
         db.execSQL("CREATE VIRTUAL TABLE notes_fts USING fts4(title, body, tokenize=unicode61)")
         seedTemplates(db)
+        onUpgrade(db, 1, VERSION)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // v1 is the first schema; explicit migrations go here.
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE notes ADD COLUMN summary TEXT")
+            db.execSQL("ALTER TABLE notes ADD COLUMN title_custom INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE segments ADD COLUMN speaker INTEGER")
+            db.execSQL(
+                """CREATE TABLE speakers(
+                    note_id INTEGER NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+                    idx INTEGER NOT NULL,
+                    name TEXT NOT NULL,
+                    PRIMARY KEY(note_id, idx)
+                )"""
+            )
+            db.execSQL("ALTER TABLE templates ADD COLUMN category TEXT NOT NULL DEFAULT 'analyze'")
+            seedRewriteTemplates(db)
+        }
+    }
+
+    private fun seedRewriteTemplates(db: SQLiteDatabase) {
+        val items = listOf(
+            arrayOf("Письмо", "✉️",
+                "Перепиши содержание записи как вежливое деловое письмо от первого лица: приветствие, суть по пунктам, " +
+                    "просьба или следующий шаг, подпись без имени. Без вступлений вроде «Вот письмо». Отвечай на языке исходного текста."),
+            arrayOf("Сообщение", "💬",
+                "Перепиши содержание записи как короткое сообщение для мессенджера от первого лица: 2–5 предложений, " +
+                    "по делу, дружелюбно. Без вступлений и кавычек. Отвечай на языке исходного текста."),
+            arrayOf("Пост", "📣",
+                "Перепиши содержание записи как пост для соцсетей от первого лица: цепляющая первая строка, 2–4 коротких абзаца, " +
+                    "в конце вопрос к читателям. Без хэштегов, если их не было в тексте. Отвечай на языке исходного текста."),
+        )
+        items.forEachIndexed { i, a ->
+            db.insert("templates", null, ContentValues().apply {
+                put("name", a[0]); put("emoji", a[1]); put("kind", TemplateKind.TEXT); put("mode", TemplateMode.AGGREGATE)
+                put("temperature", 0.5f); put("system_prompt", a[2]); put("builtin", 1); put("sort", 100 + i)
+                put("category", TemplateCategory.REWRITE)
+            })
+        }
     }
 
     private fun seedTemplates(db: SQLiteDatabase) {
@@ -144,6 +180,6 @@ class DbHelper(context: Context) : SQLiteOpenHelper(context, NAME, null, VERSION
 
     companion object {
         const val NAME = "notes.db"
-        const val VERSION = 1
+        const val VERSION = 2
     }
 }

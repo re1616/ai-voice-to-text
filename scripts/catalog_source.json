@@ -1,29 +1,117 @@
 {
-  "models": [
-    {"id": "whisper-base-q8", "type": "STT", "name": "Whisper Base", "repo": "ggerganov/whisper.cpp", "file": "ggml-base-q8_0.bin",
-     "quant": "q8_0", "minRamGb": 3.0, "license": "MIT", "size": 82000000,
-     "description": "Самая быстрая. Для живого текста и коротких заметок; для русского — только черновик."},
-    {"id": "whisper-small-q5", "type": "STT", "name": "Whisper Small", "repo": "ggerganov/whisper.cpp", "file": "ggml-small-q5_1.bin",
-     "quant": "q5_1", "minRamGb": 4.0, "license": "MIT", "size": 190000000,
-     "description": "Основная модель для русского и английского: хорошая точность и пунктуация."},
-    {"id": "whisper-small-q8", "type": "STT", "name": "Whisper Small (q8)", "repo": "ggerganov/whisper.cpp", "file": "ggml-small-q8_0.bin",
-     "quant": "q8_0", "minRamGb": 6.0, "license": "MIT", "size": 264000000,
-     "description": "Чуть точнее Small q5, немного больше и медленнее."},
-    {"id": "whisper-turbo-q5", "type": "STT", "name": "Whisper Large-v3-Turbo", "repo": "ggerganov/whisper.cpp", "file": "ggml-large-v3-turbo-q5_0.bin",
-     "quant": "q5_0", "minRamGb": 6.0, "license": "MIT", "size": 574000000,
-     "description": "Максимальная точность: лекции, интервью, термины. Для мощных телефонов."},
-    {"id": "gemma3-1b", "type": "LLM", "name": "Gemma 3 1B", "repo": "unsloth/gemma-3-1b-it-GGUF", "file": "gemma-3-1b-it-Q4_K_M.gguf",
-     "quant": "Q4_K_M", "minRamGb": 5.0, "license": "Gemma Terms of Use", "size": 806000000,
-     "description": "Самая лёгкая LLM: короткие выжимки и задачи. Подходит для 6 ГБ ОЗУ."},
-    {"id": "qwen3-1.7b", "type": "LLM", "name": "Qwen3 1.7B", "repo": "unsloth/Qwen3-1.7B-GGUF", "file": "Qwen3-1.7B-Q4_K_M.gguf",
-     "quant": "Q4_K_M", "minRamGb": 6.0, "license": "Apache-2.0", "size": 1110000000, "noThink": true,
-     "description": "Хороший русский язык при небольшом размере."},
-    {"id": "qwen3-4b-2507", "type": "LLM", "name": "Qwen3 4B Instruct", "repo": "unsloth/Qwen3-4B-Instruct-2507-GGUF", "file": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
-     "quant": "Q4_K_M", "minRamGb": 8.0, "license": "Apache-2.0", "size": 2500000000,
-     "description": "Качественные конспекты и задачи. Для телефонов с 8+ ГБ ОЗУ."},
-    {"id": "gemma3-4b", "type": "LLM", "name": "Gemma 3 4B", "repo": "unsloth/gemma-3-4b-it-GGUF", "file": "gemma-3-4b-it-Q4_K_M.gguf",
-     "quant": "Q4_K_M", "minRamGb": 8.0, "license": "Gemma Terms of Use", "size": 2490000000,
-     "description": "Альтернатива Qwen3 4B, сильна в пересказе."}
-  ],
-  "vad": {"repo": "ggml-org/whisper-vad", "file": "ggml-silero-v5.1.2.bin"}
+ "models": [
+  {
+   "id": "whisper-base-q8",
+   "type": "STT",
+   "name": "Whisper Base",
+   "repo": "ggerganov/whisper.cpp",
+   "file": "ggml-base-q8_0.bin",
+   "quant": "q8_0",
+   "minRamGb": 3.0,
+   "license": "MIT",
+   "size": 82000000,
+   "description": "Самая быстрая. Для живого текста и коротких заметок; для русского — только черновик."
+  },
+  {
+   "id": "whisper-small-q5",
+   "type": "STT",
+   "name": "Whisper Small",
+   "repo": "ggerganov/whisper.cpp",
+   "file": "ggml-small-q5_1.bin",
+   "quant": "q5_1",
+   "minRamGb": 4.0,
+   "license": "MIT",
+   "size": 190000000,
+   "description": "Основная модель для русского и английского: хорошая точность и пунктуация."
+  },
+  {
+   "id": "whisper-small-q8",
+   "type": "STT",
+   "name": "Whisper Small (q8)",
+   "repo": "ggerganov/whisper.cpp",
+   "file": "ggml-small-q8_0.bin",
+   "quant": "q8_0",
+   "minRamGb": 6.0,
+   "license": "MIT",
+   "size": 264000000,
+   "description": "Чуть точнее Small q5, немного больше и медленнее."
+  },
+  {
+   "id": "whisper-turbo-q5",
+   "type": "STT",
+   "name": "Whisper Large-v3-Turbo",
+   "repo": "ggerganov/whisper.cpp",
+   "file": "ggml-large-v3-turbo-q5_0.bin",
+   "quant": "q5_0",
+   "minRamGb": 6.0,
+   "license": "MIT",
+   "size": 574000000,
+   "description": "Максимальная точность: лекции, интервью, термины. Для мощных телефонов."
+  },
+  {
+   "id": "gemma3-1b",
+   "type": "LLM",
+   "name": "Gemma 3 1B",
+   "repo": "unsloth/gemma-3-1b-it-GGUF",
+   "file": "gemma-3-1b-it-Q4_K_M.gguf",
+   "quant": "Q4_K_M",
+   "minRamGb": 5.0,
+   "license": "Gemma Terms of Use",
+   "size": 806000000,
+   "description": "Самая лёгкая LLM: короткие выжимки и задачи. Подходит для 6 ГБ ОЗУ."
+  },
+  {
+   "id": "qwen3-1.7b",
+   "type": "LLM",
+   "name": "Qwen3 1.7B",
+   "repo": "unsloth/Qwen3-1.7B-GGUF",
+   "file": "Qwen3-1.7B-Q4_K_M.gguf",
+   "quant": "Q4_K_M",
+   "minRamGb": 6.0,
+   "license": "Apache-2.0",
+   "size": 1110000000,
+   "noThink": true,
+   "description": "Хороший русский язык при небольшом размере."
+  },
+  {
+   "id": "qwen3-4b-2507",
+   "type": "LLM",
+   "name": "Qwen3 4B Instruct",
+   "repo": "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+   "file": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+   "quant": "Q4_K_M",
+   "minRamGb": 8.0,
+   "license": "Apache-2.0",
+   "size": 2500000000,
+   "description": "Качественные конспекты и задачи. Для телефонов с 8+ ГБ ОЗУ."
+  },
+  {
+   "id": "gemma3-4b",
+   "type": "LLM",
+   "name": "Gemma 3 4B",
+   "repo": "unsloth/gemma-3-4b-it-GGUF",
+   "file": "gemma-3-4b-it-Q4_K_M.gguf",
+   "quant": "Q4_K_M",
+   "minRamGb": 8.0,
+   "license": "Gemma Terms of Use",
+   "size": 2490000000,
+   "description": "Альтернатива Qwen3 4B, сильна в пересказе."
+  },
+  {
+   "id": "speaker-resnet34",
+   "type": "SPEAKER",
+   "name": "WeSpeaker ResNet34",
+   "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/wespeaker_en_voxceleb_resnet34_LM.onnx",
+   "file": "wespeaker_en_voxceleb_resnet34_LM.onnx",
+   "quant": "fp32",
+   "minRamGb": 3.0,
+   "license": "WeSpeaker (см. лицензию модели)",
+   "size": 26500000,
+   "description": "Различает голоса: подписывает, кто говорит."
+  }
+ ],
+ "vad": {
+  "repo": "ggml-org/whisper-vad",
+  "file": "ggml-silero-v5.1.2.bin"
+ }
 }

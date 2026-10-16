@@ -41,6 +41,17 @@ def main():
     out = []
     for m in src["models"]:
         entry = {k: v for k, v in m.items() if k not in ("repo",)}
+        if "url" in m:  # direct download (GitHub release): hash the file itself
+            try:
+                data = get(m["url"])
+                entry["sha256"] = hashlib.sha256(data).hexdigest()
+                entry["size"] = len(data)
+                print(f"ok   {m['id']}: {len(data)} bytes (direct)")
+            except Exception as e:  # noqa: BLE001
+                print(f"WARN {m['id']}: {e}", file=sys.stderr)
+                entry["sha256"] = ""
+            out.append(entry)
+            continue
         try:
             commit, sha, size = resolve(m["repo"], m["file"])
             entry["url"] = f"{HF}/{m['repo']}/resolve/{commit}/{m['file']}"

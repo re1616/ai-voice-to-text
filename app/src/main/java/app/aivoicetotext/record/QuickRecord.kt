@@ -85,3 +85,17 @@ class RecordTileService : TileService() {
         }
     }
 }
+
+/** Quick Settings tile: speak → text in the clipboard. */
+class DictationTileService : TileService() {
+    override fun onClick() {
+        super.onClick()
+        val intent = Intent(this, app.aivoicetotext.ui.DictationActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (Build.VERSION.SDK_INT >= 34) {
+            startActivityAndCollapse(PendingIntent.getActivity(this, 8, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+        } else {
+            @Suppress("DEPRECATION")
+            startActivityAndCollapse(intent)
+        }
+    }
+}

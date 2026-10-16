@@ -49,6 +49,12 @@ class App : Application() {
                 .setIntent(Intent(this, QuickRecordActivity::class.java).setAction(Intent.ACTION_VIEW))
                 .build()
             ShortcutManagerCompat.pushDynamicShortcut(this, sc)
+            val dictate = ShortcutInfoCompat.Builder(this, "dictate")
+                .setShortLabel("Диктовка в буфер")
+                .setIcon(IconCompat.createWithResource(this, R.drawable.ic_stat_mic))
+                .setIntent(Intent(this, app.aivoicetotext.ui.DictationActivity::class.java).setAction(Intent.ACTION_VIEW))
+                .build()
+            ShortcutManagerCompat.pushDynamicShortcut(this, dictate)
         }
         scope.launch(Dispatchers.IO) {
             recoverInterruptedWork()

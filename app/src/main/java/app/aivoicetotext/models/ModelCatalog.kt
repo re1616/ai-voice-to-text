@@ -3,7 +3,7 @@ package app.aivoicetotext.models
 import android.content.Context
 import org.json.JSONObject
 
-enum class ModelType { STT, LLM }
+enum class ModelType { STT, LLM, SPEAKER }
 
 data class ModelInfo(
     val id: String,
@@ -46,6 +46,12 @@ object ModelCatalog {
             "unsloth/Qwen3-4B-Instruct-2507-GGUF", "Qwen3-4B-Instruct-2507-Q4_K_M.gguf", 2_500_000_000, 8.0, "Apache-2.0"),
         llm("gemma3-4b", "Gemma 3 4B", "Альтернатива Qwen3 4B, сильна в пересказе.",
             "unsloth/gemma-3-4b-it-GGUF", "gemma-3-4b-it-Q4_K_M.gguf", 2_490_000_000, 8.0, "Gemma Terms of Use"),
+        ModelInfo(
+            "speaker-resnet34", ModelType.SPEAKER, "WeSpeaker ResNet34", "Различает голоса: подписывает, кто говорит.",
+            "wespeaker_en_voxceleb_resnet34_LM.onnx",
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/wespeaker_en_voxceleb_resnet34_LM.onnx",
+            26_500_000, null, "fp32", 3.0, "WeSpeaker (см. лицензию модели)",
+        ),
     )
 
     private fun stt(id: String, name: String, desc: String, file: String, size: Long, quant: String, ram: Double) = ModelInfo(

@@ -50,11 +50,11 @@ tap "Пропустить"
 sleep 3
 shot 02-notes
 
-# record ~8 s (same path as the in-app record button)
+# record ~8 s (same path as the big record button)
 adb shell am start -a app.aivoicetotext.RECORD -n $PKG/.ui.MainActivity
 sleep 8
 shot 03-recording
-tap "Метка"
+tap "Важно"
 tap "Пауза"
 sleep 2
 tap "Продолжить"
@@ -67,37 +67,65 @@ shot 04-after-record
 tap "Запись "
 sleep 4
 shot 05-note
+tap "Кто говорит"
+sleep 2
+shot 05b-speakers
+adb shell input keyevent KEYCODE_BACK
+sleep 1
 adb shell input keyevent KEYCODE_BACK
 sleep 2
+
+# swipe the note to the trash and undo
+shot 06a-list
+
+# ask screen
+tap "Спросить у заметок"
+sleep 3
+shot 06b-ask
+adb shell input keyevent KEYCODE_BACK
+sleep 2
+
+# filter sheet
+tap "Фильтр: папки, теги, корзина"
+sleep 2
+shot 06c-filter
+adb shell input keyevent KEYCODE_BACK
+sleep 1
 
 # settings and models
 tap "Настройки"
 sleep 2
-shot 06-settings
+shot 07-settings
+tap "Дополнительно"
+sleep 1
+shot 07b-settings-advanced
 tap "Модели"
 sleep 4
-shot 07-models
+shot 08-models
 adb shell input keyevent KEYCODE_BACK
 sleep 1
 tap "Шаблоны ИИ-действий"
 sleep 2
-shot 08-templates
+shot 09-templates
 adb shell input keyevent KEYCODE_BACK
 sleep 1
-tap "О приложении"
-sleep 2
-shot 09-about
 adb shell input keyevent KEYCODE_BACK
+sleep 1
+
+# dictation overlay
+adb shell am start -n $PKG/.ui.DictationActivity
+sleep 4
+shot 10-dictation
 adb shell input keyevent KEYCODE_BACK
 sleep 1
 
 # quick-record activity (widget / tile path)
 adb shell am start -n $PKG/.record.QuickRecordActivity
 sleep 6
-shot 10-quickrecord
+shot 11-quickrecord
 adb shell am start -n $PKG/.record.QuickRecordActivity
 sleep 8
-shot 11-quickrecord-stopped
+shot 12-quickrecord-stopped
 
 adb shell dumpsys activity services $PKG > $OUT/services.txt
 adb shell run-as $PKG ls -la files files/audio files/pcm > $OUT/files.txt 2>&1 || true

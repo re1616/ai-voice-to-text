@@ -63,6 +63,40 @@ object Jobs {
     fun cancelAi(context: Context, resultId: Long) =
         WorkManager.getInstance(context).cancelUniqueWork("ai-$resultId")
 
+    /** Live state of background post-processing, shown on the note screen (noteId -> text). */
+    val activity = kotlinx.coroutines.flow.MutableStateFlow<Map<Long, String>>(emptyMap())
+
+    fun setActivity(noteId: Long, text: String?) {
+        activity.value = if (text == null) activity.value - noteId else activity.value + (noteId to text)
+    }
+
+    /** Chains speaker detection and the automatic summary after a finished transcription. */
+    fun afterTranscription(app: app.aivoicetotext.App, noteId: Long) {
+        val s = app.prefs.value
+        when {
+            s.autoSpeakers && app.models.speakerModel() != null -> diarize(app, noteId, 0, thenSummary = true)
+            s.autoSummary && app.models.llm() != null -> summary(app, noteId)
+        }
+    }
+
+    fun summary(context: Context, noteId: Long) {
+        val req = OneTimeWorkRequestBuilder<SummaryWorker>()
+            .setInputData(workDataOf("noteId" to noteId))
+            .setConstraints(constraints(context))
+            .addTag("summary")
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork("summary-$noteId", ExistingWorkPolicy.REPLACE, req)
+    }
+
+    fun diarize(context: Context, noteId: Long, speakers: Int, thenSummary: Boolean = false) {
+        val req = OneTimeWorkRequestBuilder<DiarizeWorker>()
+            .setInputData(workDataOf("noteId" to noteId, "speakers" to speakers, "thenSummary" to thenSummary))
+            .setConstraints(constraints(context))
+            .addTag("diarize")
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork("diarize-$noteId", ExistingWorkPolicy.REPLACE, req)
+    }
+
     fun openNoteIntent(context: Context, noteId: Long): PendingIntent {
         val i = Intent(context, MainActivity::class.java)
             .setAction(MainActivity.ACTION_OPEN_NOTE)

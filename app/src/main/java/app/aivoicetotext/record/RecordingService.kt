@@ -344,7 +344,7 @@ class RecordingService : LifecycleService() {
             b.setWhen(System.currentTimeMillis() - samplesWritten * 1000 / SAMPLE_RATE)
         }
         b.addAction(0, if (paused) "Продолжить" else "Пауза", action(if (paused) ACTION_RESUME else ACTION_PAUSE, 1))
-        b.addAction(0, "Метка", action(ACTION_MARK, 2))
+        b.addAction(0, "★ Важно", action(ACTION_MARK, 2))
         b.addAction(0, "Стоп", action(ACTION_STOP, 3))
         return b.build()
     }

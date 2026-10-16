@@ -23,6 +23,10 @@ data class Settings(
     val autoScroll: Boolean = true,
     val skipSilence: Boolean = false,
     val playbackSpeed: Float = 1f,
+    /** generate a title and a 3-point summary after every transcription (needs an LLM) */
+    val autoSummary: Boolean = true,
+    /** detect speakers automatically after every transcription (needs the speaker model) */
+    val autoSpeakers: Boolean = false,
 )
 
 class Prefs(context: Context) {
@@ -48,6 +52,8 @@ class Prefs(context: Context) {
         autoScroll = sp.getBoolean("autoScroll", true),
         skipSilence = sp.getBoolean("skipSilence", false),
         playbackSpeed = sp.getFloat("playbackSpeed", 1f),
+        autoSummary = sp.getBoolean("autoSummary", true),
+        autoSpeakers = sp.getBoolean("autoSpeakers", false),
     )
 
     fun update(block: Settings.() -> Settings) {
@@ -69,6 +75,8 @@ class Prefs(context: Context) {
             .putBoolean("autoScroll", s.autoScroll)
             .putBoolean("skipSilence", s.skipSilence)
             .putFloat("playbackSpeed", s.playbackSpeed)
+            .putBoolean("autoSummary", s.autoSummary)
+            .putBoolean("autoSpeakers", s.autoSpeakers)
             .apply()
         _state.value = s
     }
@@ -82,6 +90,10 @@ class Prefs(context: Context) {
     /** Measured speed (x realtime) per model, shown in the model manager. */
     fun modelSpeed(modelId: String): Float = sp.getFloat("speed_$modelId", 0f)
     fun setModelSpeed(modelId: String, speed: Float) = sp.edit().putFloat("speed_$modelId", speed).apply()
+
+    /** Last playback position per note, so listening continues where it stopped. */
+    fun playbackPosition(noteId: Long): Long = sp.getLong("pos_$noteId", 0L)
+    fun setPlaybackPosition(noteId: Long, ms: Long) = sp.edit().putLong("pos_$noteId", ms).apply()
 
     fun exportAll(): Map<String, *> = sp.all
     fun importAll(map: Map<String, Any?>) {

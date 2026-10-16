@@ -10,6 +10,7 @@ import app.aivoicetotext.audio.AacEncoder
 import app.aivoicetotext.audio.AudioDecoder
 import app.aivoicetotext.audio.PcmFile
 import app.aivoicetotext.data.NoteStatus
+import app.aivoicetotext.engine.AutoSummary
 import app.aivoicetotext.engine.Engines
 import app.aivoicetotext.engine.Transcriber
 import app.aivoicetotext.export.Exporter
@@ -80,6 +81,7 @@ class TranscribeWorker(context: Context, params: WorkerParameters) : CoroutineWo
                     note = repo.note(noteId) ?: return Result.success()
                     repo.setStatus(noteId, NoteStatus.TRANSCRIBING)
                     Transcriber(app, repo, app.prefs.value).run(note, pcmFile, model, app.models.fileFor(model)) { p ->
+                        if (p.speed > 0) repo.updateNote(noteId, ContentValues().apply { put("speed", p.speed) }, notify = false)
                         val pct = if (p.totalMs > 0) (p.processedMs * 100 / p.totalMs).toInt() else 0
                         val text = String.format(Locale("ru"), "%d%% · %s из %s · %.1fx", pct, Fmt.clock(p.processedMs), Fmt.clock(p.totalMs), p.speed)
                         notifyProgress(notifId, note.title, text, pct, noteId)
@@ -92,11 +94,21 @@ class TranscribeWorker(context: Context, params: WorkerParameters) : CoroutineWo
             // 4. Done
             val finished = repo.note(noteId) ?: return Result.success()
             if (finished.speed > 0) app.prefs.setModelSpeed(model.id, finished.speed.toFloat())
-            File(finished.pcmPath ?: "").takeIf { it.path.isNotEmpty() }?.delete()
-            repo.updateNote(noteId, ContentValues().apply { putNull("pcm_path"); put("status", NoteStatus.DONE); putNull("error") })
+            val diarize = app.prefs.value.autoSpeakers && app.models.speakerModel() != null
+            if (!diarize) {
+                File(finished.pcmPath ?: "").takeIf { it.path.isNotEmpty() }?.delete()
+                repo.updateNote(noteId, ContentValues().apply { putNull("pcm_path") })
+            }
+            repo.updateNote(noteId, ContentValues().apply { put("status", NoteStatus.DONE); putNull("error") })
+            // a readable title right away, even without an LLM
+            if (!finished.titleCustom && AutoSummary.isDefaultTitle(finished.title)) {
+                AutoSummary.fallbackTitle(repo, noteId)?.let { repo.setAuto(noteId, it, null) }
+            }
             repo.reindex(noteId)
             runCatching { Exporter.autoExport(app, noteId) }
-            Jobs.notifyDone(app, noteId, "Расшифровка готова", finished.title)
+            val title = repo.note(noteId)?.title ?: finished.title
+            Jobs.notifyDone(app, noteId, "Расшифровка готова", title)
+            Jobs.afterTranscription(app, noteId)
             return Result.success()
         } catch (e: CancellationException) {
             // stopped by the system (constraints, quota) or by the user; progress is saved

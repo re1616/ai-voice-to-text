@@ -51,9 +51,13 @@ class ModelManager(private val context: Context, private val prefs: Prefs) {
         val cat = catalog()
         val known = cat.map { it.fileName }.toSet()
         val custom = dir.listFiles().orEmpty()
-            .filter { it.isFile && it.name !in known && !it.name.endsWith(".part") && (it.name.endsWith(".bin") || it.name.endsWith(".gguf")) }
+            .filter { it.isFile && it.name !in known && !it.name.endsWith(".part") && (it.name.endsWith(".bin") || it.name.endsWith(".gguf") || it.name.endsWith(".onnx")) }
             .map { f ->
-                val type = if (f.name.endsWith(".gguf")) ModelType.LLM else ModelType.STT
+                val type = when {
+                    f.name.endsWith(".gguf") -> ModelType.LLM
+                    f.name.endsWith(".onnx") -> ModelType.SPEAKER
+                    else -> ModelType.STT
+                }
                 val lower = f.name.lowercase()
                 ModelInfo(
                     id = "custom:${f.name}", type = type, name = f.name.removePrefix("custom-"),
@@ -82,6 +86,19 @@ class ModelManager(private val context: Context, private val prefs: Prefs) {
     fun llm(): ModelInfo? {
         val inst = installed().filter { it.type == ModelType.LLM }
         return inst.firstOrNull { it.id == prefs.value.llmModelId } ?: inst.minByOrNull { it.sizeBytes }
+    }
+
+    fun speakerModel(): ModelInfo? = installed().firstOrNull { it.type == ModelType.SPEAKER }
+
+    /** Best default choice for this phone (used by one-tap buttons). */
+    fun recommended(type: ModelType): ModelInfo? {
+        val ram = app.aivoicetotext.util.Device.totalRamGb(context)
+        val id = when (type) {
+            ModelType.STT -> if (ram >= 7.5) "whisper-turbo-q5" else if (ram >= 3.5) "whisper-small-q5" else "whisper-base-q8"
+            ModelType.LLM -> if (ram >= 7.5) "qwen3-4b-2507" else "gemma3-1b"
+            ModelType.SPEAKER -> "speaker-resnet34"
+        }
+        return catalog().firstOrNull { it.id == id } ?: catalog().firstOrNull { it.type == type }
     }
 
     fun freeSpace(): Long = runCatching { StatFs(dir.path).availableBytes }.getOrDefault(Long.MAX_VALUE)
@@ -191,6 +208,7 @@ class ModelManager(private val context: Context, private val prefs: Prefs) {
                     liveModelId = liveModelId ?: info.id,
                 )
                 ModelType.LLM -> copy(llmModelId = llmModelId ?: info.id)
+                ModelType.SPEAKER -> this
             }
         }
     }
@@ -220,6 +238,7 @@ class ModelManager(private val context: Context, private val prefs: Prefs) {
         val ok = when (type) {
             ModelType.STT -> s == "lmgg" || s == "ggml"
             ModelType.LLM -> s == "GGUF"
+            ModelType.SPEAKER -> true // ONNX (protobuf) has no fixed magic
         }
         return if (ok) null else "Неверный формат файла модели"
     }
@@ -234,10 +253,11 @@ class ModelManager(private val context: Context, private val prefs: Prefs) {
             val head = ByteArray(4)
             resolver.openInputStream(uri)?.use { it.read(head) } ?: error("Не удалось открыть файл")
             val magic = String(head, Charsets.ISO_8859_1)
-            val ext = when (magic) {
-                "GGUF" -> ".gguf"
-                "lmgg", "ggml" -> ".bin"
-                else -> error("Это не модель whisper.cpp (.bin) и не GGUF")
+            val ext = when {
+                magic == "GGUF" -> ".gguf"
+                magic == "lmgg" || magic == "ggml" -> ".bin"
+                name.endsWith(".onnx", ignoreCase = true) -> ".onnx"
+                else -> error("Это не модель whisper.cpp (.bin), не GGUF и не ONNX")
             }
             val base = name.substringBeforeLast('.').replace(Regex("[^A-Za-z0-9._-]"), "_")
             val catalogMatch = catalog().firstOrNull { it.fileName.equals(name, ignoreCase = true) }

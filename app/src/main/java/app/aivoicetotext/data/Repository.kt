@@ -53,8 +53,77 @@ class Repository(private val helper: DbHelper) {
         updateNote(id, ContentValues().apply { put("status", status); put("error", error) })
 
     fun rename(id: Long, title: String) {
-        updateNote(id, ContentValues().apply { put("title", title) })
+        updateNote(id, ContentValues().apply { put("title", title); put("title_custom", 1) })
         reindex(id)
+    }
+
+    /** Automatic title/summary; never overwrites a title the user typed. */
+    fun setAuto(id: Long, title: String?, summary: String?) {
+        val n = note(id) ?: return
+        updateNote(id, ContentValues().apply {
+            if (title != null && !n.titleCustom) put("title", title)
+            if (summary != null) put("summary", summary)
+        })
+        reindex(id)
+    }
+
+    fun recentNotes(limit: Int, since: Long = 0): List<Note> =
+        db.rawQuery("SELECT * FROM notes WHERE deleted_at IS NULL AND created_at >= ? ORDER BY created_at DESC LIMIT ?",
+            arrayOf(since.toString(), limit.toString())).use { c -> c.list { it.toNote() } }
+
+    /** Note ids matching a raw FTS4 query (e.g. "word1* OR word2*"). */
+    fun searchNoteIds(ftsQuery: String, limit: Int = 30): List<Long> = try {
+        db.rawQuery(
+            "SELECT n.id FROM notes n JOIN notes_fts f ON f.docid = n.id WHERE notes_fts MATCH ? AND n.deleted_at IS NULL ORDER BY n.created_at DESC LIMIT ?",
+            arrayOf(ftsQuery, limit.toString()),
+        ).use { c -> c.list { it.getLong(0) } }
+    } catch (e: Exception) { emptyList() }
+
+    /** 1-based position among notes waiting for transcription, or 0. */
+    fun queuePosition(id: Long): Int {
+        val busy = notesWithStatus(NoteStatus.QUEUED, NoteStatus.ENCODING, NoteStatus.DECODING, NoteStatus.TRANSCRIBING)
+            .sortedBy { it.createdAt }
+        return busy.indexOfFirst { it.id == id } + 1
+    }
+
+    // ------------------------------------------------------------------ speakers
+
+    fun speakers(noteId: Long): List<Speaker> =
+        db.rawQuery("SELECT note_id, idx, name FROM speakers WHERE note_id=? ORDER BY idx", arrayOf(noteId.toString()))
+            .use { c -> c.list { Speaker(it.getLong(0), it.getInt(1), it.getString(2)) } }
+
+    fun observeSpeakers(noteId: Long): Flow<List<Speaker>> = observe { speakers(noteId) }
+
+    /** Replaces the speaker labels of a note: segment id -> speaker index. */
+    fun setSpeakers(noteId: Long, assignment: Map<Long, Int>, count: Int) {
+        db.beginTransaction()
+        try {
+            db.execSQL("UPDATE segments SET speaker = NULL WHERE note_id = ?", arrayOf<Any>(noteId))
+            for ((segId, spk) in assignment) {
+                db.update("segments", ContentValues().apply { put("speaker", spk) }, "id=?", arrayOf(segId.toString()))
+            }
+            val old = speakers(noteId).associate { it.idx to it.name }
+            db.delete("speakers", "note_id=?", arrayOf(noteId.toString()))
+            for (i in 0 until count) {
+                db.insert("speakers", null, ContentValues().apply {
+                    put("note_id", noteId); put("idx", i); put("name", old[i] ?: "Спикер ${i + 1}")
+                })
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        bump()
+    }
+
+    fun renameSpeaker(noteId: Long, idx: Int, name: String) {
+        db.update("speakers", ContentValues().apply { put("name", name) }, "note_id=? AND idx=?", arrayOf(noteId.toString(), idx.toString()))
+        bump()
+    }
+
+    fun setSegmentSpeaker(segId: Long, speaker: Int?) {
+        db.update("segments", ContentValues().apply { if (speaker == null) putNull("speaker") else put("speaker", speaker) }, "id=?", arrayOf(segId.toString()))
+        bump()
     }
 
     fun setPinned(id: Long, pinned: Boolean) = updateNote(id, ContentValues().apply { put("pinned", if (pinned) 1 else 0) })
@@ -231,7 +300,7 @@ class Repository(private val helper: DbHelper) {
         val v = ContentValues().apply {
             put("name", t.name); put("emoji", t.emoji); put("system_prompt", t.systemPrompt)
             put("kind", t.kind); put("mode", t.mode); put("temperature", t.temperature)
-            put("builtin", if (t.builtin) 1 else 0); put("sort", t.sort)
+            put("builtin", if (t.builtin) 1 else 0); put("sort", t.sort); put("category", t.category)
         }
         val id = if (t.id == 0L) db.insert("templates", null, v) else {
             db.update("templates", v, "id=?", arrayOf(t.id.toString())); t.id
@@ -279,6 +348,17 @@ class Repository(private val helper: DbHelper) {
         bump()
     }
 
+    /** Re-inserts a deleted result (undo). */
+    fun restoreAi(r: AiResult) {
+        db.insert("ai_results", null, ContentValues().apply {
+            put("id", r.id); put("note_id", r.noteId); put("template_id", r.templateId); put("title", r.title)
+            put("kind", r.kind); put("content", r.content); put("model_id", r.modelId); put("status", r.status)
+            put("progress", r.progress); put("total", r.total); put("error", r.error); put("created_at", r.createdAt)
+        })
+        reindex(r.noteId)
+        bump()
+    }
+
     fun deleteAi(id: Long, noteId: Long) {
         db.delete("ai_results", "id=?", arrayOf(id.toString()))
         reindex(noteId)
@@ -302,6 +382,7 @@ class Repository(private val helper: DbHelper) {
     fun reindex(noteId: Long) {
         val n = note(noteId) ?: return
         val body = buildString {
+            n.summary?.let { append(it).append(' ') }
             segments(noteId).forEach { append(it.text).append(' ') }
             aiResults(noteId).forEach { append(it.content).append(' ') }
         }
@@ -345,17 +426,21 @@ class Repository(private val helper: DbHelper) {
         speed = getDouble(getColumnIndexOrThrow("speed")),
         snippet = str("snippet") ?: "",
         updatedAt = long("updated_at"),
+        summary = str("summary"),
+        titleCustom = long("title_custom") == 1L,
     )
 
     private fun Cursor.toSegment() = Segment(
         id = long("id"), noteId = long("note_id"), startMs = long("start_ms"), endMs = long("end_ms"),
         text = str("text") ?: "", draft = long("draft") == 1L, edited = long("edited") == 1L,
+        speaker = longOrNull("speaker")?.toInt(),
     )
 
     private fun Cursor.toTemplate() = PromptTemplate(
         id = long("id"), name = str("name") ?: "", emoji = str("emoji") ?: "", systemPrompt = str("system_prompt") ?: "",
         kind = str("kind") ?: TemplateKind.TEXT, mode = str("mode") ?: TemplateMode.AGGREGATE,
         temperature = getFloat(getColumnIndexOrThrow("temperature")), builtin = long("builtin") == 1L, sort = long("sort").toInt(),
+        category = str("category") ?: TemplateCategory.ANALYZE,
     )
 
     private fun Cursor.toAi() = AiResult(

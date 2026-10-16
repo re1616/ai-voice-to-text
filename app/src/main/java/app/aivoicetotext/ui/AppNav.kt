@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import app.aivoicetotext.App
+import app.aivoicetotext.ui.screens.AskScreen
 import app.aivoicetotext.ui.screens.ModelsScreen
 import app.aivoicetotext.ui.screens.NoteScreen
 import app.aivoicetotext.ui.screens.NotesScreen
@@ -29,7 +30,7 @@ fun AppNav(activity: MainActivity) {
     LaunchedEffect(openNote) {
         val id = openNote ?: return@LaunchedEffect
         if (!settings.onboardingDone) app.prefs.update { copy(onboardingDone = true) }
-        nav.navigate("note/$id") { launchSingleTop = true }
+        nav.navigate("note/$id?t=-1") { launchSingleTop = true }
         activity.openNote.value = null
     }
 
@@ -44,14 +45,26 @@ fun AppNav(activity: MainActivity) {
             NotesScreen(
                 app = app,
                 activity = activity,
-                openNote = { nav.navigate("note/$it") },
+                openNote = { nav.navigate("note/$it?t=-1") },
                 openModels = { nav.navigate("models") },
                 openSettings = { nav.navigate("settings") },
+                openAsk = { nav.navigate("ask") },
             )
         }
-        composable("note/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
+        composable(
+            "note/{id}?t={t}",
+            arguments = listOf(
+                navArgument("id") { type = NavType.LongType },
+                navArgument("t") { type = NavType.LongType; defaultValue = -1L },
+            ),
+        ) { entry ->
             val id = entry.arguments?.getLong("id") ?: return@composable
-            NoteScreen(app, activity, id, back = { nav.popBackStack() }, openModels = { nav.navigate("models") })
+            val t = entry.arguments?.getLong("t") ?: -1L
+            NoteScreen(app, activity, id, t, back = { nav.popBackStack() }, openModels = { nav.navigate("models") },
+                openTemplates = { nav.navigate("templates") })
+        }
+        composable("ask") {
+            AskScreen(app, back = { nav.popBackStack() }, openNote = { id, ms -> nav.navigate("note/$id?t=$ms") }, openModels = { nav.navigate("models") })
         }
         composable("models") { ModelsScreen(app, back = { nav.popBackStack() }) }
         composable("settings") {

@@ -22,8 +22,18 @@ class AiProcessor(private val repo: Repository) {
         model: ModelInfo,
         llm: LlmSession,
         onProgress: suspend (done: Int, total: Int) -> Unit,
+    ): String = run(result.noteId, result.id, template, model, llm, onProgress)
+
+    /** @param cacheId ai_results id used to store intermediate outputs (null = no caching) */
+    suspend fun run(
+        noteId: Long,
+        cacheId: Long?,
+        template: PromptTemplate,
+        model: ModelInfo,
+        llm: LlmSession,
+        onProgress: suspend (done: Int, total: Int) -> Unit,
     ): String {
-        val segments = repo.segments(result.noteId).filter { !it.draft }.map { it.text.trim() }.filter { it.isNotEmpty() }
+        val segments = transcriptLines(repo, noteId)
         require(segments.isNotEmpty()) { "Нет текста для обработки" }
 
         val system = template.systemPrompt + if (template.kind == TemplateKind.CHECKLIST)
@@ -50,9 +60,9 @@ class AiProcessor(private val repo: Repository) {
         var total = parts.size + if (template.mode == TemplateMode.AGGREGATE) 1 else 0
         for ((i, part) in parts.withIndex()) {
             onProgress(i, total)
-            val cached = repo.chunkOutput(result.id, 0, i)
+            val cached = cacheGet(cacheId, 0, i)
             val out = cached ?: call(llm, model, mapSystem, part, mapOutTokens, template.temperature).also {
-                repo.saveChunkOutput(result.id, 0, i, it)
+                cachePut(cacheId, 0, i, it)
             }
             outputs += out.trim()
         }
@@ -71,9 +81,9 @@ class AiProcessor(private val repo: Repository) {
             val joined = current.joinToString("\n\n")
             if (overhead + llm.countTokens(joined) + finalOutTokens <= nCtx || level > 4) {
                 onProgress(total - 1, total)
-                val cached = repo.chunkOutput(result.id, level, 0)
+                val cached = cacheGet(cacheId, level, 0)
                 val out = cached ?: call(llm, model, reduceSystem, joined, finalOutTokens, template.temperature).also {
-                    repo.saveChunkOutput(result.id, level, 0, it)
+                    cachePut(cacheId, level, 0, it)
                 }
                 onProgress(total, total)
                 return postProcess(out, template)
@@ -82,15 +92,18 @@ class AiProcessor(private val repo: Repository) {
             total += groups.size
             val next = ArrayList<String>()
             for ((i, g) in groups.withIndex()) {
-                val cached = repo.chunkOutput(result.id, level, i + 1)
+                val cached = cacheGet(cacheId, level, i + 1)
                 next += cached ?: call(llm, model, reduceSystem, g, mapOutTokens, template.temperature).also {
-                    repo.saveChunkOutput(result.id, level, i + 1, it)
+                    cachePut(cacheId, level, i + 1, it)
                 }
             }
             current = next
             level++
         }
     }
+
+    private fun cacheGet(cacheId: Long?, level: Int, idx: Int): String? = cacheId?.let { repo.chunkOutput(it, level, idx) }
+    private fun cachePut(cacheId: Long?, level: Int, idx: Int, out: String) { if (cacheId != null) repo.saveChunkOutput(cacheId, level, idx, out) }
 
     private fun split(llm: LlmSession, items: List<String>, budget: Int): List<String> {
         val out = ArrayList<String>()
@@ -115,14 +128,41 @@ class AiProcessor(private val repo: Repository) {
         return out
     }
 
-    private suspend fun call(llm: LlmSession, model: ModelInfo, system: String, text: String, maxTokens: Int, temperature: Float): String {
-        val user = "Текст расшифровки:\n\n$text" + if (model.noThink) "\n\n/no_think" else ""
-        val prompt = llm.format(system, user) ?: error("Модель не поддерживает формат чата")
-        val raw = withNativeAbort({ llm.abort() }) { llm.generate(prompt, maxTokens, temperature) }
-        return stripThinking(raw).trim()
-    }
+    private suspend fun call(llm: LlmSession, model: ModelInfo, system: String, text: String, maxTokens: Int, temperature: Float): String =
+        ask(llm, model, system, "Текст расшифровки:\n\n$text", maxTokens, temperature)
 
     companion object {
+        /** One chat turn with the local model; [onText] receives the growing answer. */
+        suspend fun ask(
+            llm: LlmSession, model: ModelInfo, system: String, user: String, maxTokens: Int, temperature: Float,
+            onText: (String) -> Unit = {},
+        ): String {
+            val prompt = llm.format(system, user + if (model.noThink) "\n\n/no_think" else "") ?: error("Модель не поддерживает формат чата")
+            var last = 0L
+            val raw = withNativeAbort({ llm.abort() }) {
+                llm.generate(prompt, maxTokens, temperature) { t ->
+                    val now = System.currentTimeMillis()
+                    if (now - last > 120) { last = now; onText(stripThinking(t)) }
+                }
+            }
+            return stripThinking(raw).trim()
+        }
+
+        /** Transcript as lines; consecutive segments of one speaker are prefixed with the speaker's name. */
+        fun transcriptLines(repo: Repository, noteId: Long): List<String> {
+            val segs = repo.segments(noteId).filter { !it.draft && it.text.isNotBlank() }
+            val names = repo.speakers(noteId).associate { it.idx to it.name }
+            if (names.isEmpty()) return segs.map { it.text.trim() }
+            val out = ArrayList<String>()
+            var prev: Int? = -1
+            for (s in segs) {
+                val line = if (s.speaker != prev && s.speaker != null) "${names[s.speaker] ?: "Спикер ${s.speaker + 1}"}: ${s.text.trim()}" else s.text.trim()
+                out += line
+                prev = s.speaker
+            }
+            return out
+        }
+
         fun stripThinking(s: String): String {
             var t = s.replace(Regex("(?s)<think>.*?</think>"), "")
             val open = t.indexOf("<think>")

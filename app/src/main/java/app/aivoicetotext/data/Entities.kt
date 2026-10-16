@@ -45,6 +45,10 @@ data class Note(
     val speed: Double,
     val snippet: String,
     val updatedAt: Long,
+    /** Short automatic summary (3 bullet points), null until generated */
+    val summary: String? = null,
+    /** true once the user renamed the note: automatic titles never overwrite it */
+    val titleCustom: Boolean = false,
 )
 
 data class Segment(
@@ -55,7 +59,11 @@ data class Segment(
     val text: String,
     val draft: Boolean,
     val edited: Boolean,
+    /** index of the speaker (0-based) or null when speakers were not detected */
+    val speaker: Int? = null,
 )
+
+data class Speaker(val noteId: Long, val idx: Int, val name: String)
 
 data class Folder(val id: Long, val name: String)
 
@@ -106,4 +114,13 @@ data class PromptTemplate(
     val temperature: Float,
     val builtin: Boolean,
     val sort: Int,
+    val category: String = TemplateCategory.ANALYZE,
 )
+
+object TemplateCategory {
+    /** summaries, tasks, notes */
+    const val ANALYZE = "analyze"
+    /** rewrite the recording as a letter, message, post */
+    const val REWRITE = "rewrite"
+    const val CUSTOM = "custom"
+}

@@ -30,8 +30,20 @@ object Exporter {
 
     fun render(app: App, noteId: Long, format: ExportFormat, timestamps: Boolean = true): String {
         val note = app.repo.note(noteId) ?: return ""
-        val segs = app.repo.segments(noteId).filter { !it.draft }
-        val ai = app.repo.aiResults(noteId).filter { it.status == AiStatus.DONE }
+        val names = app.repo.speakers(noteId).associate { it.idx to it.name }
+        val segs = app.repo.segments(noteId).filter { !it.draft }.let { list ->
+            if (names.isEmpty()) list else {
+                var prev: Int? = -1
+                list.map { s ->
+                    val t = if (s.speaker != null && s.speaker != prev) "${names[s.speaker] ?: "Спикер ${s.speaker + 1}"}: ${s.text.trim()}" else s.text
+                    prev = s.speaker
+                    s.copy(text = t)
+                }
+            }
+        }
+        val ai = app.repo.aiResults(noteId).filter { it.status == AiStatus.DONE }.let { list ->
+            note.summary?.let { listOf(app.aivoicetotext.data.AiResult(0, noteId, 0, "Главное", "text", it, null, AiStatus.DONE, 0, 0, null, 0)) + list } ?: list
+        }
         return when (format) {
             ExportFormat.MD -> markdown(note, segs, ai.map { it.title to it.content }, timestamps)
             ExportFormat.TXT -> buildString {
@@ -76,6 +88,7 @@ object Exporter {
         appendLine("date: ${Fmt.isoDate(note.createdAt)}")
         appendLine("duration: ${Fmt.clock(note.durationMs)}")
         if (note.tags.isNotEmpty()) appendLine("tags: [${note.tags.joinToString(", ")}]")
+        if (segs.any { it.speaker != null }) appendLine("speakers: true")
         appendLine("language: ${note.detectedLanguage ?: note.language}")
         appendLine("source: AI Voice to Text")
         appendLine("---")

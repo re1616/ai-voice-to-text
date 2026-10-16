@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aivoicetotext.App
 import app.aivoicetotext.data.PromptTemplate
+import app.aivoicetotext.data.TemplateCategory
 import app.aivoicetotext.data.TemplateKind
 import app.aivoicetotext.data.TemplateMode
 import java.util.Locale
@@ -61,7 +62,7 @@ fun TemplatesScreen(app: App, back: () -> Unit) {
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                editing = PromptTemplate(0, "", "⚙️", "", TemplateKind.TEXT, TemplateMode.AGGREGATE, 0.3f, false, (templates.maxOfOrNull { it.sort } ?: 0) + 1)
+                editing = PromptTemplate(0, "", "⚙️", "", TemplateKind.TEXT, TemplateMode.AGGREGATE, 0.3f, false, (templates.maxOfOrNull { it.sort } ?: 0) + 1, TemplateCategory.CUSTOM)
             }) { Icon(Icons.Default.Add, "Новый шаблон") }
         },
     ) { padding ->
