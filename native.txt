@@ -1,0 +1,181 @@
+Cloning into 'third_party/whisper.cpp'...
+warning: refs/tags/v1.9.5 d2a764c648779feb36d44363f212a29b00aad1af is not a commit!
+Note: switching to 'd1be6fde11ac6e0407606b4e42fe72d34add8037'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Cloning into 'third_party/llama.cpp'...
+Note: switching to '43d57fb8ca78d1a39da69069cc865c9cab497b2f'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+CMake Deprecation Warning at /home/runner/work/ai-voice-to-text/ai-voice-to-text/third_party/whisper.cpp/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+
+CMAKE_BUILD_TYPE=Release
+-rw-r--r-- 1 runner runner  81768585 Oct 16 06:20 /tmp/base.bin
+-rw-r--r-- 1 runner runner 396705472 Oct 16 06:20 /tmp/llm.gguf
+-rw-r--r-- 1 runner runner    885098 Oct 16 06:20 /tmp/vad.bin
+samples: 176017
+whisper_vad_init_from_file_with_params: loading VAD model from '/tmp/vad.bin'
+whisper_vad_init_with_params: model type: silero-16k
+whisper_vad_init_with_params: model version: 5.1.2
+whisper_vad_init_with_params: n_encoder_layers = 4
+whisper_vad_init_with_params: encoder_in_channels[0] = 129
+whisper_vad_init_with_params: encoder_in_channels[1] = 128
+whisper_vad_init_with_params: encoder_in_channels[2] = 64
+whisper_vad_init_with_params: encoder_in_channels[3] = 64
+whisper_vad_init_with_params: encoder_out_channels[0] = 128
+whisper_vad_init_with_params: encoder_out_channels[1] = 64
+whisper_vad_init_with_params: encoder_out_channels[2] = 64
+whisper_vad_init_with_params: encoder_out_channels[3] = 128
+whisper_vad_init_with_params: lstm_input_size = 128
+whisper_vad_init_with_params: lstm_hidden_size = 128
+whisper_vad_init_with_params: final_conv_in = 128
+whisper_vad_init_with_params: final_conv_out = 1
+whisper_vad_init_with_params:          CPU total size =     0.88 MB
+whisper_vad_init_with_params: model size    =    0.88 MB
+whisper_backend_init_gpu: no GPU found
+whisper_vad_init_context: compute buffer (VAD)   =    1.60 MB
+whisper_vad_segments_from_samples: detecting speech timestamps in 176017 samples
+whisper_vad_detect_speech_no_reset: detecting speech in 176017 samples
+whisper_vad_detect_speech_no_reset: n_chunks: 344
+whisper_vad_detect_speech_no_reset: props size: 344
+whisper_vad_detect_speech_no_reset: chunk_len: 401 < n_window: 512
+whisper_vad_detect_speech_no_reset: vad time = 44.65 ms processing 176017 samples
+whisper_vad_segments_from_probs: detecting speech timestamps using 344 probabilities
+whisper_vad_segments_from_probs: Merged 0 adjacent segments, now have 4 segments
+whisper_vad_segments_from_probs: Final speech segments after filtering: 4
+whisper_vad_segments_from_probs: VAD segment 0: start = 0.12, end = 2.38 (duration: 2.26)
+whisper_vad_segments_from_probs: VAD segment 1: start = 3.13, end = 4.55 (duration: 1.42)
+whisper_vad_segments_from_probs: VAD segment 2: start = 5.21, end = 7.82 (duration: 2.61)
+whisper_vad_segments_from_probs: VAD segment 3: start = 7.99, end = 11.01 (duration: 3.02)
+VAD segments: 4
+  0.12 - 2.38
+  3.13 - 4.55
+  5.21 - 7.82
+  7.99 - 11.01
+transcribe rc=0 lang=en
+  [0-1100 cs]  And so my fellow Americans ask not what your country can do for you, ask what you can do for your country.
+load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+
+n_ctx=2048
+prompt tokens=64
+<|im_start|>system
+Сделай краткую выжимку списком.<|im_end|>
+<|im_start|>user
+Текст расшифровки:
+
+ And so my fellow Americans ask not what your country can do for you, ask what you can do for your country. /no_think<|im_end|>
+<|im_start|>assistant
+
+generated 26 tokens:
+<think>
+
+</think>
+
+- My fellow Americans ask what your country can do for you, and what you can do for your country.
+NATIVE TEST OK
