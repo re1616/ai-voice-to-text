@@ -13,29 +13,38 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install NDK, CMake and platform
-        run: sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p ci-logs
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          SDKM=$(ls $ANDROID_HOME/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          echo "sdkmanager: $SDKM"
+          yes | $SDKM --licenses > /dev/null || true
+          $SDKM --install "ndk;28.2.13676358" "cmake;3.22.1" "platforms;android-36" "build-tools;36.0.0" 2>&1 | tail -20 | tee ci-logs/sdk.log
 
       - name: Fetch whisper.cpp / llama.cpp
         run: ./scripts/fetch-deps.sh
 
       - name: Resolve model catalog and bundle VAD model
-        run: python3 scripts/gen_catalog.py
-
-      - uses: gradle/actions/setup-gradle@v4
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/gen_catalog.py 2>&1 | tee ci-logs/catalog.log
 
       - name: Build release APKs
-        run: ./gradlew --no-daemon assembleStandardRelease assembleOfflineRelease
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon --stacktrace assembleStandardRelease assembleOfflineRelease 2>&1 | tee ci-logs/gradle.log
 
       - name: Check 16 KB alignment of native libraries
         run: |
@@ -60,6 +69,20 @@ jobs:
           cp app/build/outputs/apk/standard/release/*.apk dist/AIVoiceToText.apk
           cp app/build/outputs/apk/offline/release/*.apk dist/AIVoiceToText-offline.apk
           ls -la dist
+
+      - name: Upload logs for debugging (on failure)
+        if: failure()
+        shell: bash
+        run: |
+          mkdir -p ci-logs
+          grep -n -E "^e: |error:|FAILURE|What went wrong|ERROR|Exception|warning: unresolved" ci-logs/gradle.log 2>/dev/null | head -300 > ci-logs/errors.txt || true
+          tail -300 ci-logs/gradle.log > ci-logs/gradle-tail.log 2>/dev/null || true
+          rm -f ci-logs/gradle.log
+          cd ci-logs
+          git init -q -b ci-logs
+          git -c user.name=ci -c user.email=ci@localhost add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -q -m "logs ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" ci-logs:ci-logs
 
       - uses: actions/upload-artifact@v4
         with:
