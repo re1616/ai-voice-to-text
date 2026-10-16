@@ -6,6 +6,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -111,7 +113,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun NotesScreen(
     app: App,
@@ -332,7 +334,7 @@ fun NotesScreen(
         ModalBottomSheet(onDismissRequest = { filterSheet = false }) {
             Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Показать", style = MaterialTheme.typography.titleMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(filter == NoteFilter.ALL && folderId == null && tag == null, { filter = NoteFilter.ALL; folderId = null; tag = null; filterSheet = false }, label = { Text("Все") })
                     FilterChip(filter == NoteFilter.PINNED, { filter = NoteFilter.PINNED; folderId = null; tag = null; filterSheet = false }, label = { Text("Закреплённые") })
                     FilterChip(filter == NoteFilter.TRASH, { filter = NoteFilter.TRASH; folderId = null; tag = null; filterSheet = false }, label = { Text("Корзина") })
@@ -346,8 +348,8 @@ fun NotesScreen(
                 if (tags.isNotEmpty()) {
                     HorizontalDivider(Modifier.padding(vertical = 6.dp))
                     Text("Теги", style = MaterialTheme.typography.titleMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        tags.take(6).forEach { t -> FilterChip(tag == t, { tag = t; folderId = null; filter = NoteFilter.ALL; filterSheet = false }, label = { Text("#$t") }) }
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        tags.take(12).forEach { t -> FilterChip(tag == t, { tag = t; folderId = null; filter = NoteFilter.ALL; filterSheet = false }, label = { Text("#$t") }) }
                     }
                 }
             }

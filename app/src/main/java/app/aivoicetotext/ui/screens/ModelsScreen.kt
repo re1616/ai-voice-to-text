@@ -177,7 +177,7 @@ private fun ModelCard(
     val ctx = LocalContext.current
     var details by remember { mutableStateOf(false) }
     val recommended = isRecommended(m, ramGb)
-    val tooBig = m.minRamGb > 0 && ramGb + 0.5 < m.minRamGb
+    val tooBig = !recommended && m.minRamGb > 0 && ramGb + 0.5 < m.minRamGb
     Card(
         Modifier.fillMaxWidth(),
         colors = if (recommended && !isInstalled) CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer) else CardDefaults.cardColors(),
