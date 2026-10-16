@@ -67,11 +67,6 @@ shot 04-after-record
 tap "Запись "
 sleep 4
 shot 05-note
-tap "Кто говорит"
-sleep 2
-shot 05b-speakers
-adb shell input keyevent KEYCODE_BACK
-sleep 1
 adb shell input keyevent KEYCODE_BACK
 sleep 2
 

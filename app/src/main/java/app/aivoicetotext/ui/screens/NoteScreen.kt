@@ -309,11 +309,14 @@ fun NoteScreen(
             // 2: main actions
             item(key = "actions") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    Button(onClick = { aiSheet = true }, enabled = done && finals.isNotEmpty(), modifier = Modifier.weight(1f).height(48.dp)) {
-                        Icon(Icons.Default.AutoAwesome, null); Spacer(Modifier.width(6.dp)); Text("ИИ-действия")
+                    Button(onClick = { aiSheet = true }, enabled = done && finals.isNotEmpty(),
+                        modifier = Modifier.weight(1f).height(48.dp).semantics { contentDescription = "ИИ-действия: выжимка, задачи, письмо" }) {
+                        Icon(Icons.Default.AutoAwesome, null); Spacer(Modifier.width(6.dp)); Text("ИИ", maxLines = 1)
                     }
-                    OutlinedButton(onClick = { speakersDialog = true }, enabled = done && finals.isNotEmpty(), modifier = Modifier.weight(1f).height(48.dp)) {
-                        Icon(Icons.Default.Groups, null); Spacer(Modifier.width(6.dp)); Text(if (speakers.isEmpty()) "Кто говорит" else "Спикеры: ${speakers.size}")
+                    OutlinedButton(onClick = { speakersDialog = true }, enabled = done && finals.isNotEmpty(),
+                        modifier = Modifier.weight(1f).height(48.dp).semantics { contentDescription = "Кто говорит: определить голоса" }) {
+                        Icon(Icons.Default.Groups, null); Spacer(Modifier.width(6.dp))
+                        Text(if (speakers.isEmpty()) "Голоса" else "Голосов: ${speakers.size}", maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
