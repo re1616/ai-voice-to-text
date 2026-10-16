@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">AI Voice to Text</string>
+    <string name="shortcut_record">Новая запись</string>
+</resources>

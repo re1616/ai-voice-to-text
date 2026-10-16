@@ -1,0 +1,76 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK, CMake and platform
+        run: sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+
+      - name: Fetch whisper.cpp / llama.cpp
+        run: ./scripts/fetch-deps.sh
+
+      - name: Resolve model catalog and bundle VAD model
+        run: python3 scripts/gen_catalog.py
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build release APKs
+        run: ./gradlew --no-daemon assembleStandardRelease assembleOfflineRelease
+
+      - name: Check 16 KB alignment of native libraries
+        run: |
+          set -e
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          for apk in app/build/outputs/apk/*/release/*.apk; do
+            echo "== $apk"
+            $BT/zipalign -c -P 16 -v 4 "$apk" | grep -E "lib/.*\.so" | head -5 || true
+            $BT/zipalign -c -P 16 4 "$apk"
+            unzip -o -q "$apk" 'lib/*' -d /tmp/apk
+            for so in /tmp/apk/lib/arm64-v8a/*.so; do
+              align=$(readelf -lW "$so" | awk '/LOAD/ {print $NF; exit}')
+              echo "$(basename $so): LOAD align $align"
+              [ "$align" = "0x4000" ] || [ "$align" = "0x10000" ] || { echo "not 16 KB aligned"; exit 1; }
+            done
+            rm -rf /tmp/apk
+          done
+
+      - name: Rename
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/standard/release/*.apk dist/AIVoiceToText.apk
+          cp app/build/outputs/apk/offline/release/*.apk dist/AIVoiceToText-offline.apk
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AIVoiceToText-apk
+          path: dist/*.apk
+
+      - name: Publish to the "latest" release
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest dist/*.apk --title "AI Voice to Text (последняя сборка)" \
+            --notes "Сборка из коммита ${GITHUB_SHA::7}. Установите AIVoiceToText.apk на телефон." --latest

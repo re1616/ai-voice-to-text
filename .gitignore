@@ -1,0 +1,10 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.cxx/
+.externalNativeBuild/
+third_party/
+app/src/main/assets/catalog.json
+app/src/main/assets/*.bin
