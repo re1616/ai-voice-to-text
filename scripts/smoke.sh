@@ -50,8 +50,8 @@ tap "Пропустить"
 sleep 3
 shot 02-notes
 
-# record ~8 s
-tap "Запись"
+# record ~8 s (same path as the in-app record button)
+adb shell am start -a app.aivoicetotext.RECORD -n $PKG/.ui.MainActivity
 sleep 8
 shot 03-recording
 tap "Метка"
