@@ -209,7 +209,7 @@ fun NoteScreen(app: App, activity: MainActivity, noteId: Long, back: () -> Unit,
             val texts = results.filter { it.kind != TemplateKind.CHECKLIST }
             TabRow(selectedTabIndex = tab) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Текст") })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("ИИ-конспект" + if (texts.isNotEmpty()) " (${texts.size})" else "") })
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Конспект" + if (texts.isNotEmpty()) " (${texts.size})" else "") })
                 Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Чек-лист" + if (checklists.isNotEmpty()) " (${checklists.size})" else "") })
             }
             if (tab != 0 || segments.isNotEmpty()) {

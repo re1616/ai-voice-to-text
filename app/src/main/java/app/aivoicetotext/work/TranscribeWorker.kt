@@ -30,11 +30,6 @@ class TranscribeWorker(context: Context, params: WorkerParameters) : CoroutineWo
         if (note.deletedAt != null) return Result.success()
         val notifId = ("tr$noteId").hashCode()
 
-        if (!Device.cpuSupported) {
-            repo.setStatus(noteId, NoteStatus.ERROR, "Процессор телефона не поддерживает нужные инструкции (ARMv8.2 dotprod)")
-            return Result.failure()
-        }
-
         try {
             foreground(notifId, note.title, "Подготовка…", 0, 0, noteId)
             val audioDir = File(app.filesDir, "audio").apply { mkdirs() }
@@ -66,6 +61,10 @@ class TranscribeWorker(context: Context, params: WorkerParameters) : CoroutineWo
             }
 
             // 3. Transcription
+            if (!Device.cpuSupported) {
+                repo.setStatus(noteId, NoteStatus.ERROR, "Процессор телефона не поддерживает нужные инструкции (ARMv8.2 dotprod)")
+                return Result.failure()
+            }
             val model = app.models.mainStt()
             if (model == null) {
                 repo.setStatus(noteId, NoteStatus.NO_MODEL, "Скачайте модель распознавания в разделе «Модели»")
